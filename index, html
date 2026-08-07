@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZuzeExchange - USDT <> Ecocash</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, push, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  
+  const firebaseConfig = {
+    databaseURL: "YOUR_DATABASE_URL_HERE" // PASTE YOUR URL HERE
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  signInAnonymously(auth);
+  
+  window.db = db; window.ref = ref; window.push = push; window.onValue = onValue; window.update = update;
+</script>
+<style>
+  body { background: #0a0a0a; color: white; font-family: Arial; }
+  .card { background: #1a1a1a; border: 1px solid #333; border-radius: 16px; padding: 20px; }
+  .btn-green { background: #00ff88; color: black; font-weight: bold; }
+  .btn-blue { background: #00d4ff; color: black; font-weight: bold; }
+  .btn-red { background: #ff4444; color: white; font-weight: bold; }
+</style>
+</head>
+<body class="p-4">
+
+<div class="max-w-3xl mx-auto">
+  <div class="text-center mb-6">
+    <h1 class="text-3xl font-bold text-[#00ff88]">ZuzeExchange 💸</h1>
+    <p class="text-gray-400">Buy USDT with Ecocash | Sell USDT for Ecocash</p>
+    <button onclick="toggleAdmin()" class="text-xs text-gray-500 mt-1">Admin Login</button>
+  </div>
+
+  <div class="card mb-4">
+    <h2 class="font-bold text-lg mb-2">⚠️ OWNER WALLET - BEP20 ONLY</h2>
+    <div class="bg-black p-3 rounded-lg flex justify-between items-center">
+      <p class="text-sm break-all">0x1234ABCD...YOUR_BEP20_ADDRESS_HERE</p>
+      <button onclick="navigator.clipboard.writeText('0x1234ABCD...YOUR_BEP20_ADDRESS_HERE')" class="btn-blue px-3 py-1 rounded text-sm">Copy</button>
+    </div>
+    <p class="text-xs text-red-400 mt-2">Ecocash to receive: <b>07XXX XXX XXX</b></p>
+  </div>
+
+  <div id="userTabs" class="flex gap-2 mb-4">
+    <button id="buyTab" onclick="showTab('buy')" class="flex-1 btn-green py-3 rounded-lg">BUY USDT</button>
+    <button id="sellTab" onclick="showTab('sell')" class="flex-1 bg-gray-700 py-3 rounded-lg">SELL USDT</button>
+  </div>
+
+  <!-- BUY -->
+  <div id="buyTabContent" class="card">
+    <h2 class="font-bold text-xl mb-3">Buy USDT with Ecocash</h2>
+    <input id="buyAmount" type="number" placeholder="USDT Amount" oninput="calcBuy()" class="w-full p-3 bg-black rounded-lg mb-2">
+    <p class="text-sm">Subtotal: $<span id="buySubtotal">0</span> | Fee 2%: $<span id="buyFee">0</span></p>
+    <p class="font-bold">Total to Pay: $<span id="buyTotal" class="text-[#00ff88]">0</span></p>
+    <input id="buyEcoNumber" type="text" placeholder="Your Ecocash 07..." class="w-full p-3 bg-black rounded-lg mt-3 mb-3">
+    <input id="buyUsdtAddress" type="text" placeholder="Your USDT BEP20 Wallet" class="w-full p-3 bg-black rounded-lg mb-3">
+    <a id="waBuyLink" href="#" target="_blank" class="btn-green w-full py-3 rounded-lg block text-center">1. Send Proof on WhatsApp</a>
+    <button onclick="submitBuy()" class="bg-gray-700 w-full py-3 rounded-lg mt-2">2. Submit Order</button>
+  </div>
+
+  <!-- SELL -->
+  <div id="sellTabContent" class="card hidden">
+    <h2 class="font-bold text-xl mb-3">Sell USDT for Ecocash</h2>
+    <input id="sellAmount" type="number" placeholder="USDT Amount" oninput="calcSell()" class="w-full p-3 bg-black rounded-lg mb-2">
+    <p class="text-sm">Subtotal: $<span id="sellSubtotal">0</span> | Fee 2%: $<span id="sellFee">0</span></p>
+    <p class="font-bold">You Receive: $<span id="sellTotal" class="text-[#00ff88]">0</span></p>
+    <input id="sellEcoNumber" type="text" placeholder="Ecocash to receive 07..." class="w-full p-3 bg-black rounded-lg mt-3 mb-3">
+    <input id="sellTxid" type="text" placeholder="Paste USDT TXID" class="w-full p-3 bg-black rounded-lg mb-3">
+    <a id="waSellLink" href="#" target="_blank" class="btn-green w-full py-3 rounded-lg block text-center">1. Send Proof on WhatsApp</a>
+    <button onclick="submitSell()" class="bg-gray-700 w-full py-3 rounded-lg mt-2">2. Submit Order</button>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="adminPanel" class="card mt-4 hidden">
+    <h2 class="font-bold text-xl text-red-400 mb-3">🔒 ADMIN PANEL</h2>
+    <div id="adminOrders">Loading...</div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="card mt-4">
+    <h2 class="font-bold">📜 All Orders - Live</h2>
+    <div id="orderList" class="text-sm mt-2">Loading...</div>
+  </div>
+</div>
+
+<script>
+const OWNER_WHATSAPP = "26377XXXXXXX"; // CHANGE
+const RATE = 1; const FEE = 0.02;
+let isAdmin = false;
+
+function showTab(tab){
+  buyTabContent.classList.toggle('hidden', tab !== 'buy');
+  sellTabContent.classList.toggle('hidden', tab !== 'sell');
+  buyTab.className = tab === 'buy' ? 'flex-1 btn-green py-3 rounded-lg' : 'flex-1 bg-gray-700 py-3 rounded-lg';
+  sellTab.className = tab === 'sell' ? 'flex-1 btn-green py-3 rounded-lg' : 'flex-1 bg-gray-700 py-3 rounded-lg';
+  updateWaLinks();
+}
+
+function calcBuy(){
+  let amt = parseFloat(buyAmount.value) || 0;
+  let subtotal = amt * RATE; let fee = subtotal * FEE; let total = subtotal + fee;
+  buySubtotal.innerText = subtotal.toFixed(2); buyFee.innerText = fee.toFixed(2); buyTotal.innerText = total.toFixed(2); updateWaLinks();
+}
+function calcSell(){
+  let amt = parseFloat(sellAmount.value) || 0;
+  let subtotal = amt * RATE; let fee = subtotal * FEE; let total = subtotal - fee;
+  sellSubtotal.innerText = subtotal.toFixed(2); sellFee.innerText = fee.toFixed(2); sellTotal.innerText = total.toFixed(2); updateWaLinks();
+}
+
+function updateWaLinks(){
+  let buyMsg = `New BUY\nUSDT: ${buyAmount.value}\nPay: $${buyTotal.innerText}\nEco: ${buyEcoNumber.value}\nWallet: ${buyUsdtAddress.value}`;
+  let sellMsg = `New SELL\nUSDT: ${sellAmount.value}\nGet: $${sellTotal.innerText}\nEco: ${sellEcoNumber.value}\nTXID: ${sellTxid.value}`;
+  waBuyLink.href = `https://wa.me/${OWNER_WHATSAPP}?text=${encodeURIComponent(buyMsg)}`;
+  waSellLink.href = `https://wa.me/${OWNER_WHATSAPP}?text=${encodeURIComponent(sellMsg)}`;
+}
+
+function submitBuy(){
+  if(!buyAmount.value || !buyEcoNumber.value || !buyUsdtAddress.value) return alert("Fill all");
+  push(ref(db, 'orders'), {type:"BUY", usdt:buyAmount.value, pay:`$${buyTotal.innerText}`, eco:buyEcoNumber.value, wallet:buyUsdtAddress.value, status:"Pending", time:Date.now()});
+  alert("Order Sent! Now send WhatsApp proof"); buyAmount.value='';
+}
+function submitSell(){
+  if(!sellAmount.value || !sellEcoNumber.value || !sellTxid.value) return alert("Fill all");
+  push(ref(db, 'orders'), {type:"SELL", usdt:sellAmount.value, pay:`$${sellTotal.innerText}`, eco:sellEcoNumber.value, txid:sellTxid.value, status:"Pending", time:Date.now()});
+  alert("Order Sent! Now send WhatsApp proof"); sellAmount.value='';
+}
+
+// LOAD ORDERS LIVE FROM FIREBASE
+onValue(ref(db, 'orders'), (snapshot) => {
+  let allOrders = []; snapshot.forEach(child => allOrders.push({id: child.key, ...child.val()}));
+  allOrders.sort((a,b) => b.time - a.time);
+  
+  orderList.innerHTML = allOrders.slice(0,10).map(o => 
+    `<div class="bg-black p-2 rounded mb-2">
+      <b>${o.type}</b> ${o.usdt} USDT = ${o.pay} <br>
+      <span class="${o.status==='Approved'?'text-green-400':'text-yellow-400'}">${o.status}</span>
+    </div>`
+  ).join('') || "No orders yet";
+  
+  if(isAdmin) loadAdmin(allOrders);
+});
+
+// ADMIN
+function toggleAdmin(){
+  let pass = prompt("Admin Password: 1234");
+  if(pass === "1234"){ isAdmin = !isAdmin; adminPanel.classList.toggle('hidden'); userTabs.classList.toggle('hidden'); }
+}
+function loadAdmin(orders){
+  adminOrders.innerHTML = orders.filter(o=>o.status==="Pending").map(o => 
+    `<div class="bg-black p-3 rounded mb-3">
+      <b>${o.type}</b> ${o.usdt} USDT <br>Amount: ${o.pay}<br>Eco: ${o.eco}<br>
+      ${o.wallet ? `Wallet: ${o.wallet}` : `TXID: ${o.txid}`}<br>
+      <div class="flex gap-2 mt-2">
+        <button onclick="update(ref(db, 'orders/'+o.id), {status:'Approved'})" class="btn-green flex-1 py-2 rounded">APPROVE</button>
+        <button onclick="update(ref(db, 'orders/'+o.id), {status:'Rejected'})" class="btn-red flex-1 py-2 rounded">REJECT</button>
+      </div>
+    </div>`
+  ).join('') || "No pending orders";
+}
+</script>
+</body>
+</html>
