@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Privacy Policy - ZuzeExchange</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-[#0a0a0a] text-white p-6 max-w-3xl mx-auto">
+<h1 class="text-3xl font-bold text-[#00ff88] mb-4">Privacy Policy</h1>
+<p class="text-sm text-gray-400 mb-6">Last Updated: August 8, 2026</p>
+
+<div class="space-y-4 text-gray-300">
+<p><b>1. Information We Collect</b><br>
+To process orders we collect: Ecocash number, USDT wallet address, transaction amount, TXID, and WhatsApp payment proof. We do NOT collect passwords or ID documents.</p>
+
+<p><b>2. How We Use Information</b><br>
+Your information is used only to: Process your exchange order, contact you about the order via WhatsApp, prevent fraud, and comply with the law.</p>
+
+<p><b>3. Data Storage</b><br>
+All data is stored securely in Firebase with encryption. Data is kept for 90 days for support purposes then deleted.</p>
+
+<p><b>4. Data Sharing</b><br>
+We do NOT sell your data. We only share data if required by law or to investigate fraud with Ecocash or law enforcement.</p>
+
+<p><b>5. Cookies</b><br>
+We use local storage to remember your order history in your browser. You can clear it anytime.</p>
+
+<p><b>6. Your Rights</b><br>
+You can request to delete your order data by contacting us on WhatsApp: +26377XXXXXXX</p>
+
+<p><b>7. Contact</b><br>
+For privacy questions contact: +26377XXXXXXX</p>
+</div>
+
+<a href="index.html" class="btn-green mt-6 inline-block px-4 py-2 rounded bg-[#00ff88] text-black font-bold">Back to Home</a>
+</body></html>
