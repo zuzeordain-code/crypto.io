@@ -1,1 +1,1 @@
-all your crypto paymebts
+all your crypto payments
